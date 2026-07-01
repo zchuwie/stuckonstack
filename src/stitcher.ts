@@ -40,8 +40,13 @@ export async function stitchProject(config: any) {
   }
 
   // Auth extension overlay
-  // (to be implemented later)
-
+  if (config.auth) {
+    const authPath = path.join(__dirname, '../templates/auth', config.auth);
+    if (await fs.pathExists(authPath)) {
+      // Typically copied into the frontend to expose the initialized client
+      await fs.copy(authPath, path.join(targetDir, 'frontend', 'src', 'auth'), { overwrite: true });
+    }
+  }
   // Write env
   await writeEnv(targetDir, config);
 

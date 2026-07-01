@@ -27,6 +27,18 @@ async function main() {
     ? process.cwd().split(/[/\\]/).pop() || null 
     : (targetArg ?? null);
 
+  const banner = `
+  ____  _              _     ___        ____  _             _    
+ / ___|| |_ _   _  ___| | __/ _ \\ _ __ / ___|| |_ __ _  ___| | __
+ \\___ \\| __| | | |/ __| |/ / | | | '_ \\\\___ \\| __/ _\` |/ __| |/ /
+  ___) | |_| |_| | (__|   <| |_| | | | |___) | || (_| | (__|   < 
+ |____/ \\__|\\__,_|\\___|_|\\_\\\\___/|_| |_|____/ \\__\\__,_|\\___|_|\\_\\
+`;
+
+  console.clear();
+  console.log(chalk.cyan(banner));
+  console.log(chalk.bold.yellow(" 🥞 The smartest way to scaffold full-stack apps.\n"));
+  
   intro(chalk.bgCyan.black(" Welcome to StuckonStack! "));
 
   const mode = await select({
@@ -56,6 +68,13 @@ async function main() {
       ],
     });
     handleCancel(preset);
+    
+    if (preset === 'mern') { frontend = 'react-vite'; backend = 'express'; database = 'mongodb'; }
+    if (preset === 'pern') { frontend = 'react-vite'; backend = 'express'; database = 'postgresql'; }
+    if (preset === 'mevn') { frontend = 'vue-vite'; backend = 'express'; database = 'mongodb'; }
+    if (preset === 't3') { frontend = 'nextjs'; backend = 'trpc'; database = 'postgresql'; }
+    if (preset === 'ai-stack') { frontend = 'react-vite'; backend = 'fastapi'; database = 'postgresql'; }
+    if (preset === 'next-supabase') { frontend = 'nextjs'; backend = null; database = 'supabase'; }
   } else {
     frontend = await select({
       message: "What is your client (frontend)?",
@@ -81,7 +100,7 @@ async function main() {
     handleCancel(backend);
 
     if (backend === "supabase" || backend === "firebase") {
-      database = backend; // It serves as both backend and database
+      database = backend;
     } else {
       database = await select({
         message: "What is your database?",
@@ -127,15 +146,6 @@ async function main() {
       options: authOptions,
     });
     handleCancel(auth);
-  }
-
-  if (preset) {
-    if (preset === 'mern') { frontend = 'react-vite'; backend = 'express'; database = 'mongodb'; }
-    if (preset === 'pern') { frontend = 'react-vite'; backend = 'express'; database = 'postgresql'; }
-    if (preset === 'mevn') { frontend = 'vue-vite'; backend = 'express'; database = 'mongodb'; }
-    if (preset === 't3') { frontend = 'nextjs'; backend = 'trpc'; database = 'postgresql'; }
-    if (preset === 'ai-stack') { frontend = 'react-vite'; backend = 'fastapi'; database = 'postgresql'; }
-    if (preset === 'next-supabase') { frontend = 'nextjs'; backend = null; database = 'supabase'; }
   }
 
   const needsPython = backend === "fastapi" || backend === "django";

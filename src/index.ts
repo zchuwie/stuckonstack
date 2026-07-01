@@ -58,7 +58,7 @@ async function main() {
     handleCancel(preset);
   } else {
     frontend = await select({
-      message: "What is your frontend?",
+      message: "What is your client (frontend)?",
       options: [
         { value: "react-vite", label: "React (Vite)" },
         { value: "nextjs", label: "Next.js" },
@@ -68,27 +68,31 @@ async function main() {
     handleCancel(frontend);
 
     backend = await select({
-      message: "What is your backend?",
+      message: "What is your server (backend)?",
       options: [
         { value: "express", label: "Express" },
         { value: "nestjs", label: "NestJS" },
         { value: "fastapi", label: "FastAPI" },
         { value: "django", label: "Django" },
+        { value: "supabase", label: "Supabase (BaaS)" },
+        { value: "firebase", label: "Firebase (BaaS)" },
       ],
     });
     handleCancel(backend);
 
-    database = await select({
-      message: "What is your database?",
-      options: [
-        { value: "mongodb", label: "MongoDB" },
-        { value: "postgresql", label: "PostgreSQL" },
-        { value: "mysql", label: "MySQL" },
-        { value: "supabase", label: "Supabase (managed)" },
-        { value: "firebase", label: "Firebase (managed)" },
-      ],
-    });
-    handleCancel(database);
+    if (backend === "supabase" || backend === "firebase") {
+      database = backend; // It serves as both backend and database
+    } else {
+      database = await select({
+        message: "What is your database?",
+        options: [
+          { value: "mongodb", label: "MongoDB" },
+          { value: "postgresql", label: "PostgreSQL" },
+          { value: "mysql", label: "MySQL" },
+        ],
+      });
+      handleCancel(database);
+    }
   }
 
   const wantsAuth = await select({
@@ -102,24 +106,100 @@ async function main() {
 
   let auth = null;
   if (wantsAuth) {
+    const authOptions = [
+      { value: "clerk", label: "Clerk" },
+      { value: "nextauth", label: "Auth.js (NextAuth)" },
+    ];
+    
+    if (database === "supabase") {
+      authOptions.unshift({ value: "supabase-auth", label: "(Recommended) Supabase Auth" });
+      authOptions.push({ value: "firebase-auth", label: "Firebase Auth" });
+    } else if (database === "firebase") {
+      authOptions.unshift({ value: "firebase-auth", label: "(Recommended) Firebase Auth" });
+      authOptions.push({ value: "supabase-auth", label: "Supabase Auth" });
+    } else {
+      authOptions.push({ value: "supabase-auth", label: "Supabase Auth" });
+      authOptions.push({ value: "firebase-auth", label: "Firebase Auth" });
+    }
+
     auth = await select({
       message: "Choose auth provider:",
-      options: [
-        { value: "clerk", label: "Clerk" },
-        { value: "supabase-auth", label: "Supabase Auth" },
-        { value: "firebase-auth", label: "Firebase Auth" },
-        { value: "nextauth", label: "Auth.js (NextAuth)" },
-      ],
+      options: authOptions,
     });
     handleCancel(auth);
   }
 
+  if (preset) {
+    if (preset === 'mern') { frontend = 'react-vite'; backend = 'express'; database = 'mongodb'; }
+    if (preset === 'pern') { frontend = 'react-vite'; backend = 'express'; database = 'postgresql'; }
+    if (preset === 'mevn') { frontend = 'vue-vite'; backend = 'express'; database = 'mongodb'; }
+    if (preset === 't3') { frontend = 'nextjs'; backend = 'trpc'; database = 'postgresql'; }
+    if (preset === 'ai-stack') { frontend = 'react-vite'; backend = 'fastapi'; database = 'postgresql'; }
+    if (preset === 'next-supabase') { frontend = 'nextjs'; backend = null; database = 'supabase'; }
+  }
+
+  const needsPython = backend === "fastapi" || backend === "django";
+  const needsNode = true;
+
+  console.log(chalk.bold("\nChecking Environment:"));
+
+  const s1 = spinner();
+  s1.start("Checking Docker...");
+  
+  const hasDockerCli = await checkEnv("docker", ["--version"]);
+  if (!hasDockerCli) {
+    s1.stop(chalk.yellow("⚠️ Docker missing."));
+    console.log(chalk.gray("  → Please install it: https://docs.docker.com/get-docker/"));
+  } else {
+    const isDockerRunning = await checkEnv("docker", ["info"]);
+    if (isDockerRunning) {
+      s1.stop(chalk.green("✔ Docker is installed and running."));
+    } else {
+      s1.stop(chalk.yellow("⚠️ Docker is installed, but not running."));
+      console.log(chalk.gray("  → Please open the Docker Desktop app to start the daemon before running the project."));
+    }
+  }
+
+  // To decide options, we need the CLI at minimum, but warn if not running.
+  const hasDocker = hasDockerCli;
+
+  if (needsPython) {
+    const s2 = spinner();
+    s2.start("Checking Python...");
+    const hasPython = await checkEnv("python", ["--version"]) || await checkEnv("python3", ["--version"]);
+    if (hasPython) {
+      s2.stop(chalk.green("✔ Python found."));
+    } else {
+      s2.stop(chalk.yellow("⚠️ Python missing."));
+      console.log(chalk.gray(`  → Your backend (${backend}) requires Python: https://www.python.org/downloads/`));
+    }
+  }
+
+  if (needsNode) {
+    const s3 = spinner();
+    s3.start("Checking Node.js...");
+    const hasNode = await checkEnv("node", ["-v"]);
+    if (hasNode) {
+      s3.stop(chalk.green("✔ Node.js found."));
+    } else {
+      s3.stop(chalk.yellow("⚠️ Node.js missing."));
+      console.log(chalk.gray("  → Guide: https://nodejs.org/"));
+    }
+  }
+  console.log("");
+
+  const runnerOptions = [
+    { value: "npm", label: "Native (npm root package — lightweight, best for most PCs)" },
+  ];
+  if (hasDocker) {
+    runnerOptions.unshift({ value: "docker", label: "(Recommended) Docker (docker-compose — isolated)" });
+  } else {
+    runnerOptions.push({ value: "docker", label: "Docker (Requires installation: https://docs.docker.com/get-docker/)" });
+  }
+
   const runner = await select({
     message: "How do you want to run this project locally?",
-    options: [
-      { value: "npm", label: "Native (npm root package — lightweight, best for most PCs)" },
-      { value: "docker", label: "Docker (docker-compose — isolated, requires Docker installed)" },
-    ],
+    options: runnerOptions,
   });
   handleCancel(runner);
 
@@ -132,15 +212,6 @@ async function main() {
       },
     });
     handleCancel(projectName);
-  }
-
-  if (preset) {
-    if (preset === 'mern') { frontend = 'react-vite'; backend = 'express'; database = 'mongodb'; }
-    if (preset === 'pern') { frontend = 'react-vite'; backend = 'express'; database = 'postgresql'; }
-    if (preset === 'mevn') { frontend = 'vue-vite'; backend = 'express'; database = 'mongodb'; }
-    if (preset === 't3') { frontend = 'nextjs'; backend = 'trpc'; database = 'postgresql'; }
-    if (preset === 'ai-stack') { frontend = 'react-vite'; backend = 'fastapi'; database = 'postgresql'; }
-    if (preset === 'next-supabase') { frontend = 'nextjs'; backend = null; database = 'supabase'; }
   }
 
   const config = {
@@ -158,33 +229,6 @@ async function main() {
 
   console.log("\nHere's your stack:");
   console.log(chalk.cyan(JSON.stringify(config, null, 2)));
-
-  const needsPython = backend === "fastapi" || backend === "django";
-  const needsNode = true; // CLI runs on Node, but to be sure for frontend/backend
-
-  const sEnv = spinner();
-  sEnv.start("Checking environment...");
-  const hasDocker = runner === "docker" ? await checkEnv("docker", ["--version"]) : true;
-  const hasPython = needsPython ? (await checkEnv("python", ["--version"]) || await checkEnv("python3", ["--version"])) : true;
-  const hasNode = needsNode ? await checkEnv("node", ["-v"]) : true;
-  sEnv.stop("Environment checked.");
-
-  if (!hasDocker) {
-    console.log(chalk.yellow("\n⚠️  Docker is missing."));
-    console.log("Since you chose Docker, please install it before running the app.");
-    console.log("Guide: https://docs.docker.com/get-docker/");
-  }
-
-  if (!hasPython) {
-    console.log(chalk.yellow("\n⚠️  Python is missing."));
-    console.log(`Your backend (${backend}) requires Python.`);
-    console.log("Guide: https://www.python.org/downloads/");
-  }
-
-  if (!hasNode) {
-    console.log(chalk.yellow("\n⚠️  Node.js is missing (somehow!)."));
-    console.log("Guide: https://nodejs.org/");
-  }
 
   const confirmed = await confirm({
     message: "Confirm and generate?",

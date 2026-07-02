@@ -56,19 +56,40 @@ export async function stitchProject(config: any) {
     scripts: {}
   };
 
+  // Create BaaS typical folders
+  const isSupabase = backend === 'supabase' || database === 'supabase';
+  const isFirebase = backend === 'firebase' || database === 'firebase';
+
+  if (isSupabase) {
+    await fs.ensureDir(path.join(targetDir, 'supabase', 'migrations'));
+    await fs.ensureDir(path.join(targetDir, 'supabase', 'functions'));
+  }
+  if (isFirebase) {
+    await fs.ensureDir(path.join(targetDir, 'firebase', 'functions'));
+  }
+
+  const hasNodeBackend = !!backend && backend !== 'supabase' && backend !== 'firebase';
+
   if (config.runner === 'docker') {
     await writeDockerCompose(targetDir, config);
     rootPkg.scripts = {
       "dev": "docker-compose up --build"
     };
   } else if (config.runner === 'npm') {
-    rootPkg.scripts = {
-      "install:all": "npm install --prefix frontend && npm install --prefix backend",
-      "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\""
-    };
-    rootPkg.devDependencies = {
-      "concurrently": "^8.2.0"
-    };
+    if (hasNodeBackend) {
+      rootPkg.scripts = {
+        "install:all": "npm install --prefix frontend && npm install --prefix backend",
+        "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\""
+      };
+      rootPkg.devDependencies = {
+        "concurrently": "^8.2.0"
+      };
+    } else {
+      rootPkg.scripts = {
+        "install:all": "npm install --prefix frontend",
+        "dev": "npm run dev --prefix frontend"
+      };
+    }
   }
 
   await fs.writeJson(path.join(targetDir, 'package.json'), rootPkg, { spaces: 2 });

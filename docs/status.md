@@ -10,6 +10,9 @@
 - **BaaS Folders**: Creation of standard directories for Supabase (`supabase/migrations`, `supabase/functions`) and Firebase (`firebase/functions`).
 - **Runner Configuration**: Support for generating `docker-compose` and local `concurrently` (npm) setups.
 - **Auth Templates**: Clerk boilerplate implemented for React/Express (Login/Signup/Home with session management).
+- **DRY Auth Injection**: Scaffolding now injects Auth code (providers, routing, middleware) dynamically into `react-vite` (`App.tsx`) and `nextjs` (`layout.tsx`/`middleware.ts`) via placeholders rather than full-file overrides.
+- **Boilerplate Docs Page**: React and Next.js templates now ship with a default, stylized documentation landing page that shows immediately if auth is disabled, or after login if auth is enabled.
+- **Testing**: Jest test suite configured covering `mergePackageJson` and `stitchProject` filesystem logic.
 
 ## To Do
 - **Populate Templates**: The newly created template directories (`vue-vite`, `nestjs`, `django`, `mysql-*`) are currently empty folders waiting for actual boilerplate code.

@@ -9,6 +9,7 @@ export function Home() {
       <h1>Welcome to your App</h1>
       <header>
         <SignedOut>
+          
           <p>Please log in to continue.</p>
           <div style={{ display: 'flex', gap: '1rem' }}>
             <Link to="/login">Login</Link>

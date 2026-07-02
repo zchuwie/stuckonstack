@@ -12,23 +12,27 @@ export async function stitchProject(config: any) {
   // Copy frontend
   if (frontend) {
     const fePath = path.join(__dirname, '../templates/frontends', frontend);
-    await fs.copy(fePath, path.join(targetDir, 'frontend'));
+    await fs.copy(fePath, path.join(targetDir, 'client'));
   }
 
-  // Copy backend
-  if (backend) {
+  const isSupabase = backend === 'supabase' || database === 'supabase';
+  const isFirebase = backend === 'firebase' || database === 'firebase';
+  const isBaaS = backend === 'supabase' || backend === 'firebase';
+
+  // Copy backend (only if it's not a BaaS)
+  if (backend && !isBaaS) {
     const bePath = path.join(__dirname, '../templates/backends', backend);
-    await fs.copy(bePath, path.join(targetDir, 'backend'));
+    await fs.copy(bePath, path.join(targetDir, 'server'));
   }
 
   // Database extension overlay
-  if (backend && database) {
+  if (backend && database && !isBaaS) {
     const dbExtPath = path.join(__dirname, '../templates/database-extensions', `${database}-${backend}`);
     if (await fs.pathExists(dbExtPath)) {
-      await fs.copy(dbExtPath, path.join(targetDir, 'backend'), { overwrite: true });
+      await fs.copy(dbExtPath, path.join(targetDir, 'server'), { overwrite: true });
       
       // Merge package.json
-      const basePkgPath = path.join(targetDir, 'backend', 'package.json');
+      const basePkgPath = path.join(targetDir, 'server', 'package.json');
       const extPkgPath = path.join(dbExtPath, 'package.json');
       if (await fs.pathExists(basePkgPath) && await fs.pathExists(extPkgPath)) {
         const basePkg = await fs.readJson(basePkgPath);
@@ -43,8 +47,8 @@ export async function stitchProject(config: any) {
   if (config.auth) {
     const authPath = path.join(__dirname, '../templates/auth', config.auth);
     if (await fs.pathExists(authPath)) {
-      // Typically copied into the frontend to expose the initialized client
-      await fs.copy(authPath, path.join(targetDir, 'frontend', 'src', 'auth'), { overwrite: true });
+      // Typically copied into the client to expose the initialized client
+      await fs.copy(authPath, path.join(targetDir, 'client', 'src', 'auth'), { overwrite: true });
     }
   }
   // Write env
@@ -57,9 +61,6 @@ export async function stitchProject(config: any) {
   };
 
   // Create BaaS typical folders
-  const isSupabase = backend === 'supabase' || database === 'supabase';
-  const isFirebase = backend === 'firebase' || database === 'firebase';
-
   if (isSupabase) {
     await fs.ensureDir(path.join(targetDir, 'supabase', 'migrations'));
     await fs.ensureDir(path.join(targetDir, 'supabase', 'functions'));
@@ -68,7 +69,7 @@ export async function stitchProject(config: any) {
     await fs.ensureDir(path.join(targetDir, 'firebase', 'functions'));
   }
 
-  const hasNodeBackend = !!backend && backend !== 'supabase' && backend !== 'firebase';
+  const hasNodeBackend = !!backend && !isBaaS;
 
   if (config.runner === 'docker') {
     await writeDockerCompose(targetDir, config);
@@ -78,16 +79,16 @@ export async function stitchProject(config: any) {
   } else if (config.runner === 'npm') {
     if (hasNodeBackend) {
       rootPkg.scripts = {
-        "install:all": "npm install --prefix frontend && npm install --prefix backend",
-        "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\""
+        "install:all": "npm install --prefix client && npm install --prefix server",
+        "dev": "concurrently \"npm run dev --prefix client\" \"npm run dev --prefix server\""
       };
       rootPkg.devDependencies = {
         "concurrently": "^8.2.0"
       };
     } else {
       rootPkg.scripts = {
-        "install:all": "npm install --prefix frontend",
-        "dev": "npm run dev --prefix frontend"
+        "install:all": "npm install --prefix client",
+        "dev": "npm run dev --prefix client"
       };
     }
   }

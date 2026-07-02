@@ -16,8 +16,8 @@ describe('stitchProject', () => {
     (fs.pathExists as jest.Mock).mockResolvedValue(true);
     (fs.readJson as jest.Mock).mockResolvedValue({});
     (fs.writeJson as jest.Mock).mockResolvedValue(undefined);
-    (fs.readFile as jest.Mock).mockResolvedValue('/* {{AUTH_IMPORTS}} */ /* {{AUTH_PROVIDER_START}} */ /* {{AUTH_ROUTES}} */');
-    (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+    (fs.readFile as unknown as jest.Mock).mockResolvedValue('/* {{AUTH_IMPORTS}} */ /* {{AUTH_PROVIDER_START}} */ /* {{AUTH_ROUTES}} */');
+    (fs.writeFile as unknown as jest.Mock).mockResolvedValue(undefined);
   });
 
   it('creates client and server folders for standard frontend/backend', async () => {

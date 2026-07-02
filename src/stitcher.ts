@@ -61,6 +61,27 @@ export async function stitchProject(config: any) {
           appContent = appContent.replace('/* {{AUTH_ROUTES}} */', `<Route path="/login" element={<Login />} />\n        <Route path="/signup" element={<Signup />} />`);
           await fs.writeFile(appPath, appContent, 'utf8');
         }
+      // Inject Next.js Auth wiring
+      if (frontend === 'nextjs') {
+        const layoutPath = path.join(targetDir, 'client', 'app', 'layout.tsx');
+        if (await fs.pathExists(layoutPath)) {
+          let layoutContent = await fs.readFile(layoutPath, 'utf8');
+          layoutContent = layoutContent.replace('/* {{AUTH_IMPORTS}} */', `import { ClerkProvider } from '@clerk/nextjs'`);
+          layoutContent = layoutContent.replace('/* {{AUTH_PROVIDER_START}} */', '<ClerkProvider>');
+          layoutContent = layoutContent.replace('/* {{AUTH_PROVIDER_END}} */', '</ClerkProvider>');
+          await fs.writeFile(layoutPath, layoutContent, 'utf8');
+        }
+        const pagePath = path.join(targetDir, 'client', 'app', 'page.tsx');
+        if (await fs.pathExists(pagePath)) {
+          let pageContent = await fs.readFile(pagePath, 'utf8');
+          pageContent = pageContent.replace('/* {{AUTH_PROTECT}} */\n\n', '');
+          await fs.writeFile(pagePath, pageContent, 'utf8');
+        }
+        await fs.writeFile(
+          path.join(targetDir, 'client', 'middleware.ts'),
+          `import { clerkMiddleware } from "@clerk/nextjs/server";\n\nexport default clerkMiddleware();\n\nexport const config = {\n  matcher: ["/((?!.+\\\\.[\\\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],\n};`,
+          'utf8'
+        );
       }
     }
   } else {
@@ -75,6 +96,22 @@ export async function stitchProject(config: any) {
         appContent = appContent.replace('/* {{HOME_ROUTE}} */', '<Route path="/" element={<Home />} />');
         appContent = appContent.replace('/* {{AUTH_ROUTES}} */\n        ', '');
         await fs.writeFile(appPath, appContent, 'utf8');
+      }
+    }
+    if (frontend === 'nextjs') {
+      const layoutPath = path.join(targetDir, 'client', 'app', 'layout.tsx');
+      if (await fs.pathExists(layoutPath)) {
+        let layoutContent = await fs.readFile(layoutPath, 'utf8');
+        layoutContent = layoutContent.replace('/* {{AUTH_IMPORTS}} */\n', '');
+        layoutContent = layoutContent.replace('/* {{AUTH_PROVIDER_START}} */\n    ', '');
+        layoutContent = layoutContent.replace('\n    /* {{AUTH_PROVIDER_END}} */', '');
+        await fs.writeFile(layoutPath, layoutContent, 'utf8');
+      }
+      const pagePath = path.join(targetDir, 'client', 'app', 'page.tsx');
+      if (await fs.pathExists(pagePath)) {
+        let pageContent = await fs.readFile(pagePath, 'utf8');
+        pageContent = pageContent.replace('/* {{AUTH_PROTECT}} */\n\n', '');
+        await fs.writeFile(pagePath, pageContent, 'utf8');
       }
     }
   }

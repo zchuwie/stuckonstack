@@ -61,6 +61,7 @@ export async function stitchProject(config: any) {
           appContent = appContent.replace('/* {{AUTH_ROUTES}} */', `<Route path="/login" element={<Login />} />\n        <Route path="/signup" element={<Signup />} />`);
           await fs.writeFile(appPath, appContent, 'utf8');
         }
+      }
       // Inject Next.js Auth wiring
       if (frontend === 'nextjs') {
         const layoutPath = path.join(targetDir, 'client', 'app', 'layout.tsx');

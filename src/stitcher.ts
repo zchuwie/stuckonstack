@@ -43,12 +43,37 @@ export async function stitchProject(config: any) {
     }
   }
 
-  // Auth extension overlay
+  // Auth extension overlay & Placeholder injection
   if (config.auth) {
     const authPath = path.join(__dirname, '../templates/auth', config.auth);
     if (await fs.pathExists(authPath)) {
-      // Typically copied into the client to expose the initialized client
       await fs.copy(authPath, path.join(targetDir, 'client', 'src', 'auth'), { overwrite: true });
+
+      // Inject React Auth wiring
+      if (frontend === 'react-vite') {
+        const appPath = path.join(targetDir, 'client', 'src', 'App.tsx');
+        if (await fs.pathExists(appPath)) {
+          let appContent = await fs.readFile(appPath, 'utf8');
+          appContent = appContent.replace('/* {{AUTH_IMPORTS}} */', `import { AuthProvider } from "./auth/src/auth/AuthProvider";\nimport { Login } from "./auth/src/pages/Login";\nimport { Signup } from "./auth/src/pages/Signup";`);
+          appContent = appContent.replace('/* {{AUTH_PROVIDER_START}} */', '<AuthProvider>');
+          appContent = appContent.replace('/* {{AUTH_PROVIDER_END}} */', '</AuthProvider>');
+          appContent = appContent.replace('/* {{AUTH_ROUTES}} */', `<Route path="/login" element={<Login />} />\n        <Route path="/signup" element={<Signup />} />`);
+          await fs.writeFile(appPath, appContent, 'utf8');
+        }
+      }
+    }
+  } else {
+    // Strip placeholders if no auth is selected
+    if (frontend === 'react-vite') {
+      const appPath = path.join(targetDir, 'client', 'src', 'App.tsx');
+      if (await fs.pathExists(appPath)) {
+        let appContent = await fs.readFile(appPath, 'utf8');
+        appContent = appContent.replace('/* {{AUTH_IMPORTS}} */\n', '');
+        appContent = appContent.replace('/* {{AUTH_PROVIDER_START}} */\n    ', '');
+        appContent = appContent.replace('\n    /* {{AUTH_PROVIDER_END}} */', '');
+        appContent = appContent.replace('/* {{AUTH_ROUTES}} */\n        ', '');
+        await fs.writeFile(appPath, appContent, 'utf8');
+      }
     }
   }
   // Write env

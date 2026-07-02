@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "start": "node dist/index.js"
   },
   "repository": {
@@ -35,8 +35,10 @@
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^30.0.0",
     "@types/node": "^26.0.1",
     "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3"
   }

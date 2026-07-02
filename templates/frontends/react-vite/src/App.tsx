@@ -7,7 +7,7 @@ function App() {
     /* {{AUTH_PROVIDER_START}} */
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
+        /* {{HOME_ROUTE}} */
         /* {{AUTH_ROUTES}} */
       </Routes>
     </BrowserRouter>
